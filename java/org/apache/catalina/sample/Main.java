@@ -5,6 +5,8 @@ import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.coyote.http11.Http11NioProtocol;
+import org.apache.jasper.compiler.JspUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -20,7 +22,7 @@ import java.io.Writer;
  */
 public class Main {
 
-    public static final String DEFAULT_PROTOCOL = "org.apache.coyote.http11.Http11NioProtocol";
+    public static final String DEFAULT_PROTOCOL = Http11NioProtocol.class.getName();
 
     public static void main(String[] args) throws LifecycleException,
             InterruptedException, ServletException {
@@ -28,9 +30,13 @@ public class Main {
         Tomcat tomcat = new Tomcat();
 
         Connector connector = new Connector(DEFAULT_PROTOCOL);
-        connector.setThrowOnFailure(true);
-        connector.setPort(8080);
+        connector.setPort(8081);
         tomcat.setConnector(connector);
+
+//        Connector connector2 = new Connector(DEFAULT_PROTOCOL);
+//        connector2.setPort(8082);
+//        tomcat.setConnector(connector2);
+
 
         Context ctx = tomcat.addContext("/", new File(".").getAbsolutePath());
 
@@ -41,10 +47,10 @@ public class Main {
                     throws ServletException, IOException {
                 Writer w = resp.getWriter();
                 w.write("Embedded Tomcat servlet.\n");
-                String string = RedisUtils.get("aaa");
-                if(string!=null){
-                    w.write(string);
-                }
+//                String string = RedisUtils.get("aaa");
+//                if(string!=null){
+//                    w.write(string);
+//                }
                 w.flush();
                 w.close();
             }
@@ -53,7 +59,7 @@ public class Main {
         ctx.addServletMappingDecoded("/hello", "Embedded");
 
         tomcat.start();
-        System.out.println("Tomcat started at http://localhost:8080");
+        System.out.println("Tomcat started at http://localhost:8081/hello");
         tomcat.getServer().await();
     }
 
