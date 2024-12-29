@@ -40,23 +40,31 @@ public class Main {
 
         Context ctx = tomcat.addContext("/", new File(".").getAbsolutePath());
 
-        RedisUtils.init();;
         Tomcat.addServlet(ctx, "Embedded", new HttpServlet() {
             @Override
             protected void service(HttpServletRequest req, HttpServletResponse resp)
                     throws ServletException, IOException {
                 Writer w = resp.getWriter();
                 w.write("Embedded Tomcat servlet.\n");
-//                String string = RedisUtils.get("aaa");
-//                if(string!=null){
-//                    w.write(string);
-//                }
+
+                w.flush();
+                w.close();
+            }
+        });
+        Tomcat.addServlet(ctx, "Embedded2", new HttpServlet() {
+            @Override
+            protected void service(HttpServletRequest req, HttpServletResponse resp)
+                throws ServletException, IOException {
+                Writer w = resp.getWriter();
+                w.write("Embedded Tomcat servlet.\n");
+
                 w.flush();
                 w.close();
             }
         });
 
         ctx.addServletMappingDecoded("/hello", "Embedded");
+        ctx.addServletMappingDecoded("/hello2", "Embedded2");
 
         tomcat.start();
         System.out.println("Tomcat started at http://localhost:8081/hello");
