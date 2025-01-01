@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import org.apache.jasper.servlet.JasperInitializer;
 
 /**
  * @author xiaochangbai
@@ -29,6 +30,8 @@ public class Main {
 
         Tomcat tomcat = new Tomcat();
 
+        JasperInitializer jasperInitializer = new JasperInitializer();
+
         Connector connector = new Connector(DEFAULT_PROTOCOL);
         connector.setPort(8081);
         tomcat.setConnector(connector);
@@ -38,8 +41,10 @@ public class Main {
 //        tomcat.setConnector(connector2);
 
 
-        Context ctx = tomcat.addContext("/", new File(".").getAbsolutePath());
+        String webs = new File("webs").getAbsolutePath();
 
+        Context ctx = tomcat.addContext("/",webs );
+        tomcat.initWebappDefaults("/");
         Tomcat.addServlet(ctx, "Embedded", new HttpServlet() {
             @Override
             protected void service(HttpServletRequest req, HttpServletResponse resp)
@@ -51,6 +56,7 @@ public class Main {
                 w.close();
             }
         });
+
         Tomcat.addServlet(ctx, "Embedded2", new HttpServlet() {
             @Override
             protected void service(HttpServletRequest req, HttpServletResponse resp)
