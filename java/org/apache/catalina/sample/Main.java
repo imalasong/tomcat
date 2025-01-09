@@ -10,6 +10,7 @@ import org.apache.coyote.http11.Http11NioProtocol;
 import org.apache.jasper.compiler.JspUtil;
 
 import javax.servlet.ServletException;
+import javax.servlet.SingleThreadModel;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -46,19 +47,9 @@ public class Main {
         // JSP初始化（非必要项，如果不要jsp的话就不需要下面这行代码）
         new JasperInitializer();
         String webs = new File("webs").getAbsolutePath();
-        Context ctx = tomcat.addContext("/",webs );
+        Context ctx = tomcat.addContext("/",webs);
         tomcat.initWebappDefaults("/");
-        Tomcat.addServlet(ctx, "Embedded", new HttpServlet() {
-            @Override
-            protected void service(HttpServletRequest req, HttpServletResponse resp)
-                    throws ServletException, IOException {
-                Writer w = resp.getWriter();
-                w.write("Embedded Tomcat servlet.\n");
-
-                w.flush();
-                w.close();
-            }
-        });
+        Tomcat.addServlet(ctx, "Embedded", new MyServlet());
         ctx.addServletMappingDecoded("/hello", "Embedded");
 
 
@@ -66,6 +57,18 @@ public class Main {
         tomcat.start();
         System.out.println("Tomcat started at http://localhost:8081/hello");
         tomcat.getServer().await();
+    }
+
+    public static class MyServlet extends HttpServlet implements SingleThreadModel {
+        @Override
+        protected void service(HttpServletRequest req, HttpServletResponse resp)
+            throws ServletException, IOException {
+            Writer w = resp.getWriter();
+            w.write(this.toString()+":Embedded Tomcat servlet.\n");
+
+            w.flush();
+            w.close();
+        }
     }
 
 }
