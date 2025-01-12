@@ -50,7 +50,9 @@ public class Main {
         Context ctx = tomcat.addContext("/",webs);
         tomcat.initWebappDefaults("/");
         Tomcat.addServlet(ctx, "Embedded", new MyServlet());
+        Tomcat.addServlet(ctx, "Embedded2", new MyServlet());
         ctx.addServletMappingDecoded("/hello", "Embedded");
+        ctx.addServletMappingDecoded("/hello2", "Embedded2");
 
 
         //3、启动tomcat

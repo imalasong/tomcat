@@ -16,6 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class NioServer {
 
 
+    private volatile static boolean isRun = true;
+
     public static void main(String[] args) throws IOException {
         // 设置boss线程的名称为"boss"
         Thread.currentThread().setName("boss");
@@ -28,15 +30,15 @@ public class NioServer {
          */
         ssc.configureBlocking(false);
         // 创建boss线程的selector，该selector专门监听accept事件
-        Selector boss = Selector.open();
+        Selector bossSelector = Selector.open();
         // 将创建好的ServerSocketChannel和关注的accept事件注册到该selector
-        SelectionKey bossKey = ssc.register(boss, 0, null);
+        SelectionKey bossKey = ssc.register(bossSelector, 0, null);
         bossKey.interestOps(SelectionKey.OP_ACCEPT);
         // ServerSocketChannel和端口进行绑定
         ssc.bind(new InetSocketAddress(8088));
+
         // 创建一定数量的worker
         int cpuNum = Runtime.getRuntime().availableProcessors();
-        System.out.println("cpuNum:" + cpuNum);
         Worker[] workers = new Worker[cpuNum];
         for (int i = 0; i < workers.length; i++) {
             workers[i] = new Worker("worker-" + i);
@@ -44,7 +46,7 @@ public class NioServer {
         }
 
         AtomicInteger count = new AtomicInteger();
-        while (true) {
+        while (isRun) {
             /**
              * 轮训check查询的时候是否就绪，如果未就绪则select不会返回，只有监听的事件发生select()方法才返回
              * 每个selector中有两个集合：
@@ -53,8 +55,8 @@ public class NioServer {
              * 注意每次select()方法调用时，可以理解为是往"selected keys集合"中追加本次select()新扫描的事件，上次select()并且加入的事件不会自动清除。
              * 因此后面迭代器迭代"selected keys集合"时需要及时remove掉，否则下次循环会重复消费处理
              */
-            boss.select();
-            Iterator<SelectionKey> bossSelectedKeysIter = boss.selectedKeys().iterator();
+            bossSelector.select();
+            Iterator<SelectionKey> bossSelectedKeysIter = bossSelector.selectedKeys().iterator();
             while (bossSelectedKeysIter.hasNext()) {
                 SelectionKey key = bossSelectedKeysIter.next();
                 /**
@@ -65,7 +67,6 @@ public class NioServer {
                 if (key.isAcceptable()) {
                     SelectableChannel keyChannel = key.channel();
                     ServerSocketChannel sscFromSelector = (ServerSocketChannel) keyChannel;
-                    System.out.println("sscFromSelector == ssc?" + (sscFromSelector == ssc));
 
                     SocketChannel sc = sscFromSelector.accept();
                     sc.configureBlocking(false);
@@ -114,8 +115,9 @@ public class NioServer {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void run() {
-            while (true) {
+            while (isRun) {
                 try {
                     workerSelector.select();
                     /**
@@ -132,7 +134,9 @@ public class NioServer {
                         workerSelectedKeysIter.remove();
                         if (key.isReadable()) {
                             SocketChannel channel = (SocketChannel) key.channel();
-                            ByteBuffer byteBuffer = ByteBuffer.allocate(16);
+
+
+                            ByteBuffer byteBuffer = ByteBuffer.allocate(1600);
                             /**
                              * 将channel中的数据写入buffer
                              * 注意：两种情况需要做好处理：
@@ -152,7 +156,14 @@ public class NioServer {
 
                             byteBuffer.flip();
                             if(channel.isOpen()){
-                                channel.write(ByteBuffer.wrap("hello\n".getBytes()));
+                                // 简单构造一个HTTP响应
+                                String response = "HTTP/1.1 200 OK\r\n" +
+                                    "Content-Type: text/html; charset=UTF-8\r\n" +
+                                    "\r\n" +
+                                    "<html><body><h1>Hello, World!</h1></body></html>";
+                                ByteBuffer responseBuffer = ByteBuffer.wrap(response.getBytes());
+                                channel.write(responseBuffer);
+                                channel.close();
                             }
 
                         }
